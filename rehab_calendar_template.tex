@@ -1,0 +1,172 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Monthly Calendar
+% LaTeX Template
+%
+% This template has been downloaded from:
+% http://www.latextemplates.com
+%
+% Original calendar style author:
+% Evan Sultanik (http://www.sultanik.com/LaTeX_calendar_style)
+%
+% Important note:
+% This template requires the calendar.sty file to be in the same directory as the
+% .tex file. The calendar.sty file provides the necessary structure to create the
+% calendar.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[landscape,a4paper]{article}
+
+\usepackage{calendar} % Use the calendar.sty style
+\usepackage{amssymb} % Provides square symbols for the daily checkboxes
+
+\usepackage[landscape,margin=0.5in]{geometry}
+
+\usepackage{graphicx}
+
+\newcommand{\DayCheckboxes}{\mbox{\scalebox{1.6}{$\square\ \square$}}\\[6pt]}
+
+\newcount\CalendarYear
+\newcount\CalendarMonth
+\newcount\CalendarMonthDays
+\newcount\CalendarLeadingBlanks
+\newcount\CalendarWeekday
+\newcount\CalendarAdjustedYear
+\newcount\CalendarAdjustedMonth
+\newcount\CalendarCentury
+\newcount\CalendarYearOfCentury
+\newcount\CalendarTemp
+
+\CalendarYear=2026
+\CalendarMonth=2
+
+\newcommand{\CalendarMonthName}{%
+  \ifcase\the\CalendarMonth
+  \or January%
+  \or February%
+  \or March%
+  \or April%
+  \or May%
+  \or June%
+  \or July%
+  \or August%
+  \or September%
+  \or October%
+  \or November%
+  \or December%
+  \else Invalid Month%
+  \fi
+}
+
+\newcommand{\ComputeCalendarMonthDays}{%
+  \CalendarMonthDays=31
+  \ifnum\CalendarMonth=4 \CalendarMonthDays=30\fi
+  \ifnum\CalendarMonth=6 \CalendarMonthDays=30\fi
+  \ifnum\CalendarMonth=9 \CalendarMonthDays=30\fi
+  \ifnum\CalendarMonth=11 \CalendarMonthDays=30\fi
+  \ifnum\CalendarMonth=2
+    \CalendarMonthDays=28
+    \CalendarTemp=\numexpr\the\CalendarYear-400*(\the\CalendarYear/400)\relax
+    \ifnum\CalendarTemp=0
+      \CalendarMonthDays=29
+    \else
+      \CalendarTemp=\numexpr\the\CalendarYear-100*(\the\CalendarYear/100)\relax
+      \ifnum\CalendarTemp=0
+      \else
+        \CalendarTemp=\numexpr\the\CalendarYear-4*(\the\CalendarYear/4)\relax
+        \ifnum\CalendarTemp=0
+          \CalendarMonthDays=29
+        \fi
+      \fi
+    \fi
+  \fi
+}
+
+\newcommand{\ComputeCalendarLeadingBlanks}{%
+  % Zeller's congruence converted to Sunday=0 through Saturday=6.
+  \CalendarAdjustedYear=\CalendarYear
+  \CalendarAdjustedMonth=\CalendarMonth
+  \ifnum\CalendarAdjustedMonth<3
+    \advance\CalendarAdjustedMonth by 12
+    \advance\CalendarAdjustedYear by -1
+  \fi
+  \CalendarCentury=\numexpr\the\CalendarAdjustedYear/100\relax
+  \CalendarYearOfCentury=\numexpr\the\CalendarAdjustedYear-100*\the\CalendarCentury\relax
+  \CalendarWeekday=\numexpr
+    1 + (13*(\the\CalendarAdjustedMonth+1))/5 + \the\CalendarYearOfCentury
+    + \the\CalendarYearOfCentury/4 + \the\CalendarCentury/4 + 5*\the\CalendarCentury
+  \relax
+  \CalendarTemp=\numexpr\the\CalendarWeekday-7*(\the\CalendarWeekday/7)\relax
+  \CalendarLeadingBlanks=\numexpr\the\CalendarTemp-1\relax
+  \ifnum\CalendarLeadingBlanks<0
+    \CalendarLeadingBlanks=6
+  \fi
+}
+
+\newcommand{\PrintCalendarBlankDays}{%
+  \ifnum\CalendarLeadingBlanks>0
+    \BlankDay
+    \advance\CalendarLeadingBlanks by -1
+    \expandafter\PrintCalendarBlankDays
+  \fi
+}
+
+\newcommand{\PrintCalendarDays}{%
+  \setcounter{calendardate}{1}
+  \PrintCalendarDaysFrom{1}%
+}
+
+\newcommand{\PrintCalendarDaysFrom}[1]{%
+  \ifnum#1>\CalendarMonthDays
+  \else
+    \day{}{\DayCheckboxes\vspace{2.1cm}}%
+    \expandafter\PrintCalendarDaysFrom\expandafter{\number\numexpr#1+1\relax}%
+  \fi
+}
+
+
+\begin{document}
+
+\pagestyle{empty} % Removes the page number from the bottom of the page
+
+\noindent
+
+\StartingDayNumber=1 % Calendar starting day, default of 1 means Sunday, 2 for Monday, etc
+
+%----------------------------------------------------------------------------------------
+%	MONTH AND YEAR SECTION
+%----------------------------------------------------------------------------------------
+
+\begin{center}
+\textsc{\LARGE \CalendarMonthName}\\
+\textsc{\large \the\CalendarYear}
+\end{center}
+
+%----------------------------------------------------------------------------------------
+
+\begin{calendar}{\hsize}
+ 
+%----------------------------------------------------------------------------------------
+%	BLANK DAYS BEFORE THE BEGINNING OF THE CALENDAR
+%----------------------------------------------------------------------------------------
+
+\ComputeCalendarMonthDays
+\ComputeCalendarLeadingBlanks
+\PrintCalendarBlankDays
+
+%----------------------------------------------------------------------------------------
+%	NUMBERED DAYS AND CALENDAR CONTENT
+%----------------------------------------------------------------------------------------
+
+\PrintCalendarDays
+
+% Un-comment the \BlankDay below if the bottom line of the calendar is missing
+%\BlankDay
+
+\finishCalendar
+\end{calendar}
+\end{document}
