@@ -1,172 +1,408 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Monthly Calendar
-% LaTeX Template
+% Rehab Calendar
 %
-% This template has been downloaded from:
-% http://www.latextemplates.com
-%
-% Original calendar style author:
-% Evan Sultanik (http://www.sultanik.com/LaTeX_calendar_style)
-%
-% Important note:
-% This template requires the calendar.sty file to be in the same directory as the
-% .tex file. The calendar.sty file provides the necessary structure to create the
-% calendar.
-%
+% Set the start date and number of days below.
+% The output is a continuous calendar that only shows days in range.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%----------------------------------------------------------------------------------------
-%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
-%----------------------------------------------------------------------------------------
+\documentclass[a4paper]{article}
 
-\documentclass[landscape,a4paper]{article}
-
-\usepackage{calendar} % Use the calendar.sty style
-\usepackage{amssymb} % Provides square symbols for the daily checkboxes
-
-\usepackage[landscape,margin=0.5in]{geometry}
-
+\usepackage{amssymb}
+\usepackage{array}
+\usepackage[margin=0.5in]{geometry}
 \usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{tabularx}
 
-\newcommand{\DayCheckboxes}{\mbox{\scalebox{1.6}{$\square\ \square$}}\\[6pt]}
+% User-editable start date and calendar length.
+\newcount\StartYear
+\newcount\StartMonth
+\newcount\StartDay
+\newcount\CalendarDurationDays
 
-\newcount\CalendarYear
-\newcount\CalendarMonth
-\newcount\CalendarMonthDays
-\newcount\CalendarLeadingBlanks
-\newcount\CalendarWeekday
-\newcount\CalendarAdjustedYear
-\newcount\CalendarAdjustedMonth
-\newcount\CalendarCentury
-\newcount\CalendarYearOfCentury
-\newcount\CalendarTemp
+% 
+% 
+% --------------- User Inputs ---------------
 
-\CalendarYear=2026
-\CalendarMonth=2
+\StartYear=2026
+\StartMonth=2
+\StartDay=28
+\CalendarDurationDays=40
 
-\newcommand{\CalendarMonthName}{%
-  \ifcase\the\CalendarMonth
-  \or January%
-  \or February%
-  \or March%
-  \or April%
+% Checkbox labels and weekly visibility patterns.
+% Patterns are 7 characters ordered Monday->Sunday.
+% Use '-' to hide a checkbox on that day; any other character shows it.
+\newcommand{\CheckboxLabelOne}{FF}
+\newcommand{\CheckboxLabelTwo}{L}
+\newcommand{\CheckboxLabelThree}{M}
+\newcommand{\CheckboxLabelFour}{R}
+\newcommand{\CheckboxPatternOne}{MTWTF--}
+\newcommand{\CheckboxPatternTwo}{M-W-T---}
+\newcommand{\CheckboxPatternThree}{-T-T---}
+\newcommand{\CheckboxPatternFour}{-----SS}
+\newlength{\CheckboxColumnWidth}
+\newlength{\DayCellHeight}
+\setlength{\CheckboxColumnWidth}{2.4em}
+\setlength{\DayCellHeight}{2.4cm}
+
+% Exercise notes shown below the calendar in three columns.
+\newcommand{\ExerciseColumnOneTitle}{Exercise Set 1}
+\newcommand{\ExerciseColumnTwoTitle}{Exercise Set 2}
+\newcommand{\ExerciseColumnThreeTitle}{Exercise Set 3}
+\newcommand{\ExerciseColumnOneItems}{%
+  \item Example exercise one
+  \item Example exercise two
+  \item Example exercise three
+}
+\newcommand{\ExerciseColumnTwoItems}{%
+  \item Example exercise one
+  \item Example exercise two
+  \item Example exercise three
+}
+\newcommand{\ExerciseColumnThreeItems}{%
+  \item Example exercise one
+  \item Example exercise two
+  \item Example exercise three
+}
+
+% -------------------------------------------
+
+
+% Internal date and layout counters used while rendering the table.
+\newcount\CurrentYear
+\newcount\CurrentMonth
+\newcount\CurrentDay
+\newcount\CurrentMonthDays
+\newcount\CurrentWeekday
+\newcount\AdjustedYear
+\newcount\AdjustedMonth
+\newcount\Century
+\newcount\YearOfCentury
+\newcount\TempCount
+\newcount\PendingLeadingBlanks
+\newcount\DaysRemaining
+\newcount\TotalCells
+\newcount\TotalRows
+
+% Short month names used inside each day cell.
+\newcommand{\MonthShortName}[1]{%
+  \ifcase#1
+  \or Jan%
+  \or Feb%
+  \or Mar%
+  \or Apr%
   \or May%
-  \or June%
-  \or July%
-  \or August%
-  \or September%
-  \or October%
-  \or November%
-  \or December%
-  \else Invalid Month%
+  \or Jun%
+  \or Jul%
+  \or Aug%
+  \or Sep%
+  \or Oct%
+  \or Nov%
+  \or Dec%
+  \else ?%
   \fi
 }
 
-\newcommand{\ComputeCalendarMonthDays}{%
-  \CalendarMonthDays=31
-  \ifnum\CalendarMonth=4 \CalendarMonthDays=30\fi
-  \ifnum\CalendarMonth=6 \CalendarMonthDays=30\fi
-  \ifnum\CalendarMonth=9 \CalendarMonthDays=30\fi
-  \ifnum\CalendarMonth=11 \CalendarMonthDays=30\fi
-  \ifnum\CalendarMonth=2
-    \CalendarMonthDays=28
-    \CalendarTemp=\numexpr\the\CalendarYear-400*(\the\CalendarYear/400)\relax
-    \ifnum\CalendarTemp=0
-      \CalendarMonthDays=29
+% Finds the number of days in the current month, including leap years.
+\newcommand{\ComputeCurrentMonthDays}{%
+  \CurrentMonthDays=31
+  \ifnum\CurrentMonth=4 \CurrentMonthDays=30\fi
+  \ifnum\CurrentMonth=6 \CurrentMonthDays=30\fi
+  \ifnum\CurrentMonth=9 \CurrentMonthDays=30\fi
+  \ifnum\CurrentMonth=11 \CurrentMonthDays=30\fi
+  \ifnum\CurrentMonth=2
+    \CurrentMonthDays=28
+    \TempCount=\numexpr\the\CurrentYear-400*(\the\CurrentYear/400)\relax
+    \ifnum\TempCount=0
+      \CurrentMonthDays=29
     \else
-      \CalendarTemp=\numexpr\the\CalendarYear-100*(\the\CalendarYear/100)\relax
-      \ifnum\CalendarTemp=0
+      \TempCount=\numexpr\the\CurrentYear-100*(\the\CurrentYear/100)\relax
+      \ifnum\TempCount=0
       \else
-        \CalendarTemp=\numexpr\the\CalendarYear-4*(\the\CalendarYear/4)\relax
-        \ifnum\CalendarTemp=0
-          \CalendarMonthDays=29
+        \TempCount=\numexpr\the\CurrentYear-4*(\the\CurrentYear/4)\relax
+        \ifnum\TempCount=0
+          \CurrentMonthDays=29
         \fi
       \fi
     \fi
   \fi
 }
 
-\newcommand{\ComputeCalendarLeadingBlanks}{%
-  % Zeller's congruence converted to Sunday=0 through Saturday=6.
-  \CalendarAdjustedYear=\CalendarYear
-  \CalendarAdjustedMonth=\CalendarMonth
-  \ifnum\CalendarAdjustedMonth<3
-    \advance\CalendarAdjustedMonth by 12
-    \advance\CalendarAdjustedYear by -1
+\newcommand{\ComputeCurrentWeekday}{%
+  % Zeller's congruence converted to Monday=1 through Sunday=7.
+  \AdjustedYear=\CurrentYear
+  \AdjustedMonth=\CurrentMonth
+  \ifnum\AdjustedMonth<3
+    \advance\AdjustedMonth by 12
+    \advance\AdjustedYear by -1
   \fi
-  \CalendarCentury=\numexpr\the\CalendarAdjustedYear/100\relax
-  \CalendarYearOfCentury=\numexpr\the\CalendarAdjustedYear-100*\the\CalendarCentury\relax
-  \CalendarWeekday=\numexpr
-    1 + (13*(\the\CalendarAdjustedMonth+1))/5 + \the\CalendarYearOfCentury
-    + \the\CalendarYearOfCentury/4 + \the\CalendarCentury/4 + 5*\the\CalendarCentury
+  \Century=\numexpr\the\AdjustedYear/100\relax
+  \YearOfCentury=\numexpr\the\AdjustedYear-100*\the\Century\relax
+  \TempCount=\numexpr
+    \the\CurrentDay + (13*(\the\AdjustedMonth+1))/5 + \the\YearOfCentury
+    + \the\YearOfCentury/4 + \the\Century/4 + 5*\the\Century
   \relax
-  \CalendarTemp=\numexpr\the\CalendarWeekday-7*(\the\CalendarWeekday/7)\relax
-  \CalendarLeadingBlanks=\numexpr\the\CalendarTemp-1\relax
-  \ifnum\CalendarLeadingBlanks<0
-    \CalendarLeadingBlanks=6
+  \CurrentWeekday=\numexpr\the\TempCount-7*(\the\TempCount/7)\relax
+  \advance\CurrentWeekday by -1
+  \ifnum\CurrentWeekday<1
+    \CurrentWeekday=7
   \fi
 }
 
-\newcommand{\PrintCalendarBlankDays}{%
-  \ifnum\CalendarLeadingBlanks>0
-    \BlankDay
-    \advance\CalendarLeadingBlanks by -1
-    \expandafter\PrintCalendarBlankDays
-  \fi
-}
-
-\newcommand{\PrintCalendarDays}{%
-  \setcounter{calendardate}{1}
-  \PrintCalendarDaysFrom{1}%
-}
-
-\newcommand{\PrintCalendarDaysFrom}[1]{%
-  \ifnum#1>\CalendarMonthDays
+% Advances both the date and the weekday to the next calendar day.
+\newcommand{\AdvanceCurrentDate}{%
+  \ComputeCurrentMonthDays
+  \ifnum\CurrentWeekday<7
+    \global\advance\CurrentWeekday by 1
   \else
-    \day{}{\DayCheckboxes\vspace{2.1cm}}%
-    \expandafter\PrintCalendarDaysFrom\expandafter{\number\numexpr#1+1\relax}%
+    \global\CurrentWeekday=1
+  \fi
+  \global\advance\CurrentDay by 1
+  \ifnum\CurrentDay>\CurrentMonthDays
+    \global\CurrentDay=1
+    \global\advance\CurrentMonth by 1
+    \ifnum\CurrentMonth>12
+      \global\CurrentMonth=1
+      \global\advance\CurrentYear by 1
+    \fi
   \fi
 }
 
+% Resolves checkbox slot 1-4 to its display label.
+\newcommand{\CheckboxLabelFor}[1]{%
+  \ifcase#1
+  \or \CheckboxLabelOne%
+  \or \CheckboxLabelTwo%
+  \or \CheckboxLabelThree%
+  \or \CheckboxLabelFour%
+  \else ?%
+  \fi
+}
+
+% Pulls out a single character from a 7-character weekday pattern.
+\def\PatternCharAt#1#2{%
+  \expandafter\PatternCharAtAux#1\relax{#2}%
+}
+
+\def\PatternCharAtAux#1#2#3#4#5#6#7\relax#8{%
+  \ifcase#8 ?%
+  \or #1%
+  \or #2%
+  \or #3%
+  \or #4%
+  \or #5%
+  \or #6%
+  \or #7%
+  \else ?%
+  \fi
+}
+
+% Returns 1 when the pattern enables the checkbox on that weekday.
+\newcommand{\PatternEnabledFor}[2]{%
+  \if\expandafter\PatternCharAt\expandafter{#1}{#2}-0\else1\fi
+}
+
+% Chooses the correct pattern for checkbox slot 1-4.
+\newcommand{\CheckboxEnabledFor}[2]{%
+  \ifcase#1 0%
+  \or \PatternEnabledFor{\CheckboxPatternOne}{#2}%
+  \or \PatternEnabledFor{\CheckboxPatternTwo}{#2}%
+  \or \PatternEnabledFor{\CheckboxPatternThree}{#2}%
+  \or \PatternEnabledFor{\CheckboxPatternFour}{#2}%
+  \else 0%
+  \fi
+}
+
+% Checks whether the current weekday should show any checkbox at all.
+\newcommand{\AnyCheckboxEnabledFor}[1]{%
+  \ifnum\CheckboxEnabledFor{1}{#1}>0
+    1%
+  \else
+    \ifnum\CheckboxEnabledFor{2}{#1}>0
+      1%
+    \else
+      \ifnum\CheckboxEnabledFor{3}{#1}>0
+        1%
+      \else
+        \ifnum\CheckboxEnabledFor{4}{#1}>0
+          1%
+        \else
+          0%
+        \fi
+      \fi
+    \fi
+  \fi
+}
+
+% Renders the label row and square row in aligned columns.
+\newcommand{\CheckboxLabelRow}[1]{%
+  \makebox[\linewidth][l]{%
+    \ifnum\CheckboxEnabledFor{1}{#1}>0
+      \makebox[\CheckboxColumnWidth][c]{\scriptsize\textbf{\CheckboxLabelFor{1}}}%
+    \fi
+    \ifnum\CheckboxEnabledFor{2}{#1}>0
+      \makebox[\CheckboxColumnWidth][c]{\scriptsize\textbf{\CheckboxLabelFor{2}}}%
+    \fi
+    \ifnum\CheckboxEnabledFor{3}{#1}>0
+      \makebox[\CheckboxColumnWidth][c]{\scriptsize\textbf{\CheckboxLabelFor{3}}}%
+    \fi
+    \ifnum\CheckboxEnabledFor{4}{#1}>0
+      \makebox[\CheckboxColumnWidth][c]{\scriptsize\textbf{\CheckboxLabelFor{4}}}%
+    \fi
+  }\par
+}
+
+\newcommand{\CheckboxSquareRow}[1]{%
+  \makebox[\linewidth][l]{%
+    \ifnum\CheckboxEnabledFor{1}{#1}>0
+      \makebox[\CheckboxColumnWidth][c]{\scalebox{1.25}{$\square$}}%
+    \fi
+    \ifnum\CheckboxEnabledFor{2}{#1}>0
+      \makebox[\CheckboxColumnWidth][c]{\scalebox{1.25}{$\square$}}%
+    \fi
+    \ifnum\CheckboxEnabledFor{3}{#1}>0
+      \makebox[\CheckboxColumnWidth][c]{\scalebox{1.25}{$\square$}}%
+    \fi
+    \ifnum\CheckboxEnabledFor{4}{#1}>0
+      \makebox[\CheckboxColumnWidth][c]{\scalebox{1.25}{$\square$}}%
+    \fi
+  }%
+}
+
+% Builds the checkbox block for the current day cell.
+\newcommand{\DayCheckboxes}{%
+  \ifnum\AnyCheckboxEnabledFor{\the\CurrentWeekday}>0
+    \CheckboxLabelRow{\the\CurrentWeekday}%
+    \vspace{2pt}%
+    \CheckboxSquareRow{\the\CurrentWeekday}%
+  \fi
+}
+
+% Blank filler cells keep the Monday-Sunday table aligned at the start/end.
+\newcommand{\BlankCellContent}{%
+  \parbox[t][\DayCellHeight][t]{\linewidth}{\mbox{}}%
+}
+
+% Active day cells show the date plus any enabled checkbox labels and squares.
+\newcommand{\ActiveCellContent}{%
+  \parbox[t][\DayCellHeight][t]{\linewidth}{%
+    \raggedright
+    \vspace{-4pt} % how far down the whole block starts
+    {\Large\bfseries \the\CurrentDay}\par
+    {\small\textit{\MonthShortName{\the\CurrentMonth}}}\par
+    \vspace{6pt} % vertical gap between date and check boxes
+    \DayCheckboxes
+  }%
+}
+
+% Emits one table cell, choosing between leading blank, active day, or trailing blank.
+\newcommand{\NextCalendarCell}{%
+  \ifnum\PendingLeadingBlanks>0
+    \global\advance\PendingLeadingBlanks by -1
+    \BlankCellContent
+  \else
+    \ifnum\DaysRemaining>0
+      \ActiveCellContent
+      \global\advance\DaysRemaining by -1
+      \AdvanceCurrentDate
+    \else
+      \BlankCellContent
+    \fi
+  \fi
+}
+
+% Writes complete 7-column rows until the calendar is fully rendered.
+\newcommand{\EmitCalendarRows}[1]{%
+  \ifnum#1<1
+  \else
+    \NextCalendarCell &
+    \NextCalendarCell &
+    \NextCalendarCell &
+    \NextCalendarCell &
+    \NextCalendarCell &
+    \NextCalendarCell &
+    \NextCalendarCell \\
+    \hline
+    \expandafter\EmitCalendarRows\expandafter{\number\numexpr#1-1\relax}%
+  \fi
+}
+
+% Renders a titled bullet list for one exercise column.
+\newcommand{\ExerciseColumn}[2]{%
+  \parbox[t]{\linewidth}{%
+    \textbf{#1}\par
+    \vspace{4pt}%
+    {\small
+      \begin{itemize}
+      #2
+      \end{itemize}
+    }%
+  }%
+}
+
+\setlength{\LTleft}{0pt}
+\setlength{\LTright}{0pt}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.1}
+
+% Column definition for each weekday in the longtable.
+\newcolumntype{C}{>{\raggedright\arraybackslash}p{0.125\textwidth}}
 
 \begin{document}
 
-\pagestyle{empty} % Removes the page number from the bottom of the page
-
+\pagestyle{empty}
 \noindent
 
-\StartingDayNumber=1 % Calendar starting day, default of 1 means Sunday, 2 for Monday, etc
+% Initialize the rendering state from the user-configured inputs.
+\CurrentYear=\StartYear
+\CurrentMonth=\StartMonth
+\CurrentDay=\StartDay
+\ComputeCurrentWeekday
+\PendingLeadingBlanks=\CurrentWeekday
+\ifnum\PendingLeadingBlanks=0
+  \PendingLeadingBlanks=6
+\else
+  \advance\PendingLeadingBlanks by -1
+\fi
+\DaysRemaining=\CalendarDurationDays
+\TotalCells=\numexpr\the\PendingLeadingBlanks+\the\DaysRemaining\relax
+\TotalRows=\numexpr(\the\TotalCells+6)/7\relax
 
-%----------------------------------------------------------------------------------------
-%	MONTH AND YEAR SECTION
-%----------------------------------------------------------------------------------------
-
+% The calendar body repeats the weekday header automatically across pages.
 \begin{center}
-\textsc{\LARGE \CalendarMonthName}\\
-\textsc{\large \the\CalendarYear}
+\textsc{\Large Rehab Calendar}
 \end{center}
 
-%----------------------------------------------------------------------------------------
+\begin{longtable}{|C|C|C|C|C|C|C|}
+\hline
+\textsc{Monday} &
+\textsc{Tuesday} &
+\textsc{Wednesday} &
+\textsc{Thursday} &
+\textsc{Friday} &
+\textsc{Saturday} &
+\textsc{Sunday} \\
+\hline
+\endfirsthead
+\hline
+\textsc{Monday} &
+\textsc{Tuesday} &
+\textsc{Wednesday} &
+\textsc{Thursday} &
+\textsc{Friday} &
+\textsc{Saturday} &
+\textsc{Sunday} \\
+\hline
+\endhead
+\EmitCalendarRows{\the\TotalRows}
+\end{longtable}
 
-\begin{calendar}{\hsize}
- 
-%----------------------------------------------------------------------------------------
-%	BLANK DAYS BEFORE THE BEGINNING OF THE CALENDAR
-%----------------------------------------------------------------------------------------
+\vspace{0.75cm}
 
-\ComputeCalendarMonthDays
-\ComputeCalendarLeadingBlanks
-\PrintCalendarBlankDays
+\begin{tabularx}{\textwidth}{@{}X X X@{}}
+\ExerciseColumn{\ExerciseColumnOneTitle}{\ExerciseColumnOneItems} &
+\ExerciseColumn{\ExerciseColumnTwoTitle}{\ExerciseColumnTwoItems} &
+\ExerciseColumn{\ExerciseColumnThreeTitle}{\ExerciseColumnThreeItems} \\
+\end{tabularx}
 
-%----------------------------------------------------------------------------------------
-%	NUMBERED DAYS AND CALENDAR CONTENT
-%----------------------------------------------------------------------------------------
-
-\PrintCalendarDays
-
-% Un-comment the \BlankDay below if the bottom line of the calendar is missing
-%\BlankDay
-
-\finishCalendar
-\end{calendar}
 \end{document}
