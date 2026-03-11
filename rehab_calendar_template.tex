@@ -25,41 +25,52 @@
 % --------------- User Inputs ---------------
 
 \StartYear=2026
-\StartMonth=2
-\StartDay=28
-\CalendarDurationDays=40
+\StartMonth=3
+\StartDay=12
+\CalendarDurationDays=21
 
 % Checkbox labels and weekly visibility patterns.
 % Patterns are 7 characters ordered Monday->Sunday.
 % Use '-' to hide a checkbox on that day; any other character shows it.
-\newcommand{\CheckboxLabelOne}{FF}
-\newcommand{\CheckboxLabelTwo}{L}
-\newcommand{\CheckboxLabelThree}{M}
-\newcommand{\CheckboxLabelFour}{R}
-\newcommand{\CheckboxPatternOne}{MTWTF--}
-\newcommand{\CheckboxPatternTwo}{M-W-T---}
-\newcommand{\CheckboxPatternThree}{-T-T---}
-\newcommand{\CheckboxPatternFour}{-----SS}
+\newcount\CheckboxCount
+\CheckboxCount=3
+\newcommand{\DefineCheckbox}[3]{%
+  \expandafter\def\csname CheckboxLabel#1\endcsname{#2}%
+  \expandafter\def\csname CheckboxPattern#1\endcsname{#3}%
+}
+\DefineCheckbox{1}{ECU}{M-W-F--}
+\DefineCheckbox{2}{AI}{M-W-F--}
+\DefineCheckbox{3}{R}{-T-T-SS}
 \newlength{\CheckboxColumnWidth}
 \newlength{\DayCellHeight}
 \setlength{\CheckboxColumnWidth}{2.4em}
 \setlength{\DayCellHeight}{2.4cm}
 
-% Exercise notes shown below the calendar in three columns.
-\newcommand{\ExerciseColumnOneTitle}{Exercise Set 1}
-\newcommand{\ExerciseColumnTwoTitle}{Exercise Set 2}
-\newcommand{\ExerciseColumnThreeTitle}{Exercise Set 3}
-\newcommand{\ExerciseColumnOneItems}{%
-  \item Example exercise one
-  \item Example exercise two
-  \item Example exercise three
+% Exercise notes shown below the calendar. Add or remove columns by
+% adding or removing \AddExerciseColumn entries in this block.
+\newcount\ExerciseColumnCount
+\ExerciseColumnCount=0
+\newcommand{\AddExerciseColumn}[2]{%
+  \global\advance\ExerciseColumnCount by 1
+  \expandafter\gdef\csname ExerciseColumnTitle\the\ExerciseColumnCount\endcsname{#1}%
+  \expandafter\gdef\csname ExerciseColumnItems\the\ExerciseColumnCount\endcsname{#2}%
 }
-\newcommand{\ExerciseColumnTwoItems}{%
-  \item Example exercise one
-  \item Example exercise two
-  \item Example exercise three
+\AddExerciseColumn{ECU - Extensor Carpi Ulnaris}{%
+  \item Wrist Pronation / Supination
+    \begin{itemize}
+      \item 2 sets
+      \item 5 x 10s ISO each side
+      \item ECU SMR at the start and between sets
+      \item Using bare dumbbell handle
+    \end{itemize}
+  \item Wrist Extension
+    \begin{itemize}
+      \item 2 sets
+      \item 8 x 8s ISO
+      \item Resistance provided by other hand - 30-50
+    \end{itemize}
 }
-\newcommand{\ExerciseColumnThreeItems}{%
+\AddExerciseColumn{AI - Achilles Insertion}{%
   \item Example exercise one
   \item Example exercise two
   \item Example exercise three
@@ -83,6 +94,9 @@
 \newcount\DaysRemaining
 \newcount\TotalCells
 \newcount\TotalRows
+
+% e-TeX integer division rounds; these calendar formulas need floor division.
+\newcommand{\FloorDiv}[2]{\number\numexpr(2*(#1)-(#2))/(2*(#2))\relax}
 
 % Short month names used inside each day cell.
 \newcommand{\MonthShortName}[1]{%
@@ -112,14 +126,14 @@
   \ifnum\CurrentMonth=11 \CurrentMonthDays=30\fi
   \ifnum\CurrentMonth=2
     \CurrentMonthDays=28
-    \TempCount=\numexpr\the\CurrentYear-400*(\the\CurrentYear/400)\relax
+    \TempCount=\numexpr\the\CurrentYear-400*\FloorDiv{\the\CurrentYear}{400}\relax
     \ifnum\TempCount=0
       \CurrentMonthDays=29
     \else
-      \TempCount=\numexpr\the\CurrentYear-100*(\the\CurrentYear/100)\relax
+      \TempCount=\numexpr\the\CurrentYear-100*\FloorDiv{\the\CurrentYear}{100}\relax
       \ifnum\TempCount=0
       \else
-        \TempCount=\numexpr\the\CurrentYear-4*(\the\CurrentYear/4)\relax
+        \TempCount=\numexpr\the\CurrentYear-4*\FloorDiv{\the\CurrentYear}{4}\relax
         \ifnum\TempCount=0
           \CurrentMonthDays=29
         \fi
@@ -136,13 +150,13 @@
     \advance\AdjustedMonth by 12
     \advance\AdjustedYear by -1
   \fi
-  \Century=\numexpr\the\AdjustedYear/100\relax
+  \Century=\numexpr\FloorDiv{\the\AdjustedYear}{100}\relax
   \YearOfCentury=\numexpr\the\AdjustedYear-100*\the\Century\relax
   \TempCount=\numexpr
-    \the\CurrentDay + (13*(\the\AdjustedMonth+1))/5 + \the\YearOfCentury
-    + \the\YearOfCentury/4 + \the\Century/4 + 5*\the\Century
+    \the\CurrentDay + \FloorDiv{13*(\the\AdjustedMonth+1)}{5} + \the\YearOfCentury
+    + \FloorDiv{\the\YearOfCentury}{4} + \FloorDiv{\the\Century}{4} + 5*\the\Century
   \relax
-  \CurrentWeekday=\numexpr\the\TempCount-7*(\the\TempCount/7)\relax
+  \CurrentWeekday=\numexpr\the\TempCount-7*\FloorDiv{\the\TempCount}{7}\relax
   \advance\CurrentWeekday by -1
   \ifnum\CurrentWeekday<1
     \CurrentWeekday=7
@@ -168,15 +182,9 @@
   \fi
 }
 
-% Resolves checkbox slot 1-4 to its display label.
+% Resolves checkbox slot N to its display label.
 \newcommand{\CheckboxLabelFor}[1]{%
-  \ifcase#1
-  \or \CheckboxLabelOne%
-  \or \CheckboxLabelTwo%
-  \or \CheckboxLabelThree%
-  \or \CheckboxLabelFour%
-  \else ?%
-  \fi
+  \csname CheckboxLabel#1\endcsname%
 }
 
 % Pulls out a single character from a 7-character weekday pattern.
@@ -202,71 +210,63 @@
   \if\expandafter\PatternCharAt\expandafter{#1}{#2}-0\else1\fi
 }
 
-% Chooses the correct pattern for checkbox slot 1-4.
+% Chooses the correct pattern for any configured checkbox slot.
 \newcommand{\CheckboxEnabledFor}[2]{%
-  \ifcase#1 0%
-  \or \PatternEnabledFor{\CheckboxPatternOne}{#2}%
-  \or \PatternEnabledFor{\CheckboxPatternTwo}{#2}%
-  \or \PatternEnabledFor{\CheckboxPatternThree}{#2}%
-  \or \PatternEnabledFor{\CheckboxPatternFour}{#2}%
-  \else 0%
+  \ifnum#1<1
+    0%
+  \else
+    \ifnum#1>\CheckboxCount
+      0%
+    \else
+      \expandafter\PatternEnabledFor\expandafter{\csname CheckboxPattern#1\endcsname}{#2}%
+    \fi
   \fi
 }
 
 % Checks whether the current weekday should show any checkbox at all.
 \newcommand{\AnyCheckboxEnabledFor}[1]{%
-  \ifnum\CheckboxEnabledFor{1}{#1}>0
-    1%
+  \AnyCheckboxEnabledForAux{1}{#1}%
+}
+
+\newcommand{\AnyCheckboxEnabledForAux}[2]{%
+  \ifnum#1>\CheckboxCount
+    0%
   \else
-    \ifnum\CheckboxEnabledFor{2}{#1}>0
+    \ifnum\CheckboxEnabledFor{#1}{#2}>0
       1%
     \else
-      \ifnum\CheckboxEnabledFor{3}{#1}>0
-        1%
-      \else
-        \ifnum\CheckboxEnabledFor{4}{#1}>0
-          1%
-        \else
-          0%
-        \fi
-      \fi
+      \expandafter\AnyCheckboxEnabledForAux\expandafter{\number\numexpr#1+1\relax}{#2}%
     \fi
   \fi
 }
 
 % Renders the label row and square row in aligned columns.
+\newcommand{\RenderCheckboxLabels}[2]{%
+  \ifnum#1>\CheckboxCount
+  \else
+    \ifnum\CheckboxEnabledFor{#1}{#2}>0
+      \makebox[\CheckboxColumnWidth][c]{\scriptsize\textbf{\CheckboxLabelFor{#1}}}%
+    \fi
+    \expandafter\RenderCheckboxLabels\expandafter{\number\numexpr#1+1\relax}{#2}%
+  \fi
+}
+
+\newcommand{\RenderCheckboxSquares}[2]{%
+  \ifnum#1>\CheckboxCount
+  \else
+    \ifnum\CheckboxEnabledFor{#1}{#2}>0
+      \makebox[\CheckboxColumnWidth][c]{\scalebox{1.25}{$\square$}}%
+    \fi
+    \expandafter\RenderCheckboxSquares\expandafter{\number\numexpr#1+1\relax}{#2}%
+  \fi
+}
+
 \newcommand{\CheckboxLabelRow}[1]{%
-  \makebox[\linewidth][l]{%
-    \ifnum\CheckboxEnabledFor{1}{#1}>0
-      \makebox[\CheckboxColumnWidth][c]{\scriptsize\textbf{\CheckboxLabelFor{1}}}%
-    \fi
-    \ifnum\CheckboxEnabledFor{2}{#1}>0
-      \makebox[\CheckboxColumnWidth][c]{\scriptsize\textbf{\CheckboxLabelFor{2}}}%
-    \fi
-    \ifnum\CheckboxEnabledFor{3}{#1}>0
-      \makebox[\CheckboxColumnWidth][c]{\scriptsize\textbf{\CheckboxLabelFor{3}}}%
-    \fi
-    \ifnum\CheckboxEnabledFor{4}{#1}>0
-      \makebox[\CheckboxColumnWidth][c]{\scriptsize\textbf{\CheckboxLabelFor{4}}}%
-    \fi
-  }\par
+  \makebox[\linewidth][l]{\RenderCheckboxLabels{1}{#1}}\par
 }
 
 \newcommand{\CheckboxSquareRow}[1]{%
-  \makebox[\linewidth][l]{%
-    \ifnum\CheckboxEnabledFor{1}{#1}>0
-      \makebox[\CheckboxColumnWidth][c]{\scalebox{1.25}{$\square$}}%
-    \fi
-    \ifnum\CheckboxEnabledFor{2}{#1}>0
-      \makebox[\CheckboxColumnWidth][c]{\scalebox{1.25}{$\square$}}%
-    \fi
-    \ifnum\CheckboxEnabledFor{3}{#1}>0
-      \makebox[\CheckboxColumnWidth][c]{\scalebox{1.25}{$\square$}}%
-    \fi
-    \ifnum\CheckboxEnabledFor{4}{#1}>0
-      \makebox[\CheckboxColumnWidth][c]{\scalebox{1.25}{$\square$}}%
-    \fi
-  }%
+  \makebox[\linewidth][l]{\RenderCheckboxSquares{1}{#1}}%
 }
 
 % Builds the checkbox block for the current day cell.
@@ -340,6 +340,28 @@
   }%
 }
 
+\newlength{\ExerciseColumnWidth}
+
+\newcommand{\RenderExerciseColumns}{%
+  \ifnum\ExerciseColumnCount>0
+    \setlength{\ExerciseColumnWidth}{\dimexpr\textwidth/\ExerciseColumnCount-2pt\relax}%
+    \RenderExerciseColumnsAux{1}%
+  \fi
+}
+
+\newcommand{\RenderExerciseColumnsAux}[1]{%
+  \ifnum#1>\ExerciseColumnCount
+  \else
+    \begin{minipage}[t]{\ExerciseColumnWidth}
+      \ExerciseColumn{\csname ExerciseColumnTitle#1\endcsname}{\csname ExerciseColumnItems#1\endcsname}%
+    \end{minipage}%
+    \ifnum#1<\ExerciseColumnCount
+      \hfill
+    \fi
+    \expandafter\RenderExerciseColumnsAux\expandafter{\number\numexpr#1+1\relax}%
+  \fi
+}
+
 \setlength{\LTleft}{0pt}
 \setlength{\LTright}{0pt}
 \setlength{\tabcolsep}{4pt}
@@ -366,7 +388,7 @@
 \fi
 \DaysRemaining=\CalendarDurationDays
 \TotalCells=\numexpr\the\PendingLeadingBlanks+\the\DaysRemaining\relax
-\TotalRows=\numexpr(\the\TotalCells+6)/7\relax
+\TotalRows=\numexpr\FloorDiv{\the\TotalCells+6}{7}\relax
 
 % The calendar body repeats the weekday header automatically across pages.
 \begin{center}
@@ -399,10 +421,8 @@
 
 \vspace{0.75cm}
 
-\begin{tabularx}{\textwidth}{@{}X X X@{}}
-\ExerciseColumn{\ExerciseColumnOneTitle}{\ExerciseColumnOneItems} &
-\ExerciseColumn{\ExerciseColumnTwoTitle}{\ExerciseColumnTwoItems} &
-\ExerciseColumn{\ExerciseColumnThreeTitle}{\ExerciseColumnThreeItems} \\
-\end{tabularx}
+\ifnum\ExerciseColumnCount>0
+\noindent\RenderExerciseColumns
+\fi
 
 \end{document}
