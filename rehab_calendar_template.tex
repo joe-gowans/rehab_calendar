@@ -13,6 +13,7 @@
 \usepackage{graphicx}
 \usepackage{longtable}
 \usepackage{tabularx}
+\usepackage{enumitem}
 
 % User-editable start date and calendar length.
 \newcount\StartYear
@@ -32,15 +33,19 @@
 % Checkbox labels and weekly visibility patterns.
 % Patterns are 7 characters ordered Monday->Sunday.
 % Use '-' to hide a checkbox on that day; any other character shows it.
+%
+% Change \CheckboxCount=X and \DefineCheckbox{X}{R}{-----SS} etc
+% 
 \newcount\CheckboxCount
-\CheckboxCount=3
+\CheckboxCount=4
 \newcommand{\DefineCheckbox}[3]{%
   \expandafter\def\csname CheckboxLabel#1\endcsname{#2}%
   \expandafter\def\csname CheckboxPattern#1\endcsname{#3}%
 }
 \DefineCheckbox{1}{ECU}{M-W-F--}
-\DefineCheckbox{2}{AI}{M-W-F--}
-\DefineCheckbox{3}{R}{-T-T-SS}
+\DefineCheckbox{2}{IL}{M-W-F--}
+\DefineCheckbox{3}{IS}{-T-T---}
+\DefineCheckbox{4}{R}{-----SS}
 \newlength{\CheckboxColumnWidth}
 \newlength{\DayCellHeight}
 \setlength{\CheckboxColumnWidth}{2.4em}
@@ -55,6 +60,7 @@
   \expandafter\gdef\csname ExerciseColumnTitle\the\ExerciseColumnCount\endcsname{#1}%
   \expandafter\gdef\csname ExerciseColumnItems\the\ExerciseColumnCount\endcsname{#2}%
 }
+
 \AddExerciseColumn{ECU - Extensor Carpi Ulnaris}{%
   \item Wrist Pronation / Supination
     \begin{itemize}
@@ -70,10 +76,22 @@
       \item Resistance provided by other hand - 30-50
     \end{itemize}
 }
-\AddExerciseColumn{AI - Achilles Insertion}{%
-  \item Example exercise one
-  \item Example exercise two
-  \item Example exercise three
+\AddExerciseColumn{IL - Insertion Load}{%
+  \item 3 Position Calf Raises
+  \begin{itemize}
+    \item 3 x 10 reps, 2-3 RIR
+    \item 4s up / 4s down, Heel to floor only
+    \item Feet out, feet in, feet straight
+    \item Gradually increase weight each week, maybe to single leg, starting at 10kg  
+  \end{itemize}
+}
+\AddExerciseColumn{IS - Insertion Stretch}{%
+  \item Wall Calf Stretch
+  \begin{itemize}
+    \item 20s hold
+    \item 2 reps
+    \item Mild intensity stretch
+  \end{itemize}
 }
 
 % -------------------------------------------
@@ -328,6 +346,9 @@
 }
 
 % Renders a titled bullet list for one exercise column.
+\setlist[itemize,1]{before=\bfseries,after=\normalfont}
+\setlist[itemize,2]{before=\normalfont,after=\normalfont}
+
 \newcommand{\ExerciseColumn}[2]{%
   \parbox[t]{\linewidth}{%
     \textbf{#1}\par
